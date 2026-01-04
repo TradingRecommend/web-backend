@@ -9,55 +9,67 @@ import { AllExceptionsFilter } from './configs/decorators/catchError';
 import CustomLogger from './modules/log/customLogger';
 import getLogLevels from './utils/getLogLevels';
 
+// Store the app instance for Vercel
+let cachedApp: any;
+
 async function bootstrap() {
-  // Logger
-  const app = await NestFactory.create(AppModule, {
-    logger: getLogLevels(process.env.NODE_ENV === 'production'),
-    bufferLogs: true,
-  });
-  app.useLogger(app.get(CustomLogger));
+  if (!cachedApp) {
+    const app = await NestFactory.create(AppModule, {
+      logger: getLogLevels(process.env.NODE_ENV === 'production'),
+      bufferLogs: true,
+    });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-    }),
-  );
+    app.useLogger(app.get(CustomLogger));
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    app.use(cookieParser());
+    app.setGlobalPrefix('api/v1');
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  app.use(cookieParser());
+    const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    app.enableCors({
+      origin: corsOrigin,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      credentials: true,
+      allowedHeaders: 'Content-Type, Accept, Authorization',
+    });
 
-  // Set global API prefix
-  app.setGlobalPrefix('api/v1');
+    app.useGlobalInterceptors(
+      new ClassSerializerInterceptor(app.get(Reflector)),
+      new ResponseInterceptor(),
+    );
 
-  // Enable CORS for frontend origin(s)
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-  app.enableCors({
-    origin: corsOrigin,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-    allowedHeaders: 'Content-Type, Accept, Authorization',
-  });
+    const httpAdapter = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
-    new ResponseInterceptor(),
-  );
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('API with NestJS')
+      .setDescription('API developed throughout the API with NestJS course')
+      .setVersion('1.0')
+      .build();
 
-  // Catch exception
-  const httpAdapter = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/v1/api', app, document);
 
-  // Swagger
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('API with NestJS')
-    .setDescription('API developed throughout the API with NestJS course')
-    .setVersion('1.0')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/v1/api', app, document);
-
-  await app.listen(process.env.PORT);
+    // Initialise the app but don't call .listen() yet
+    await app.init();
+    cachedApp = app;
+  }
+  return cachedApp;
 }
-bootstrap();
+
+// Logic to run local vs serverless
+if (process.env.NODE_ENV !== 'production') {
+  // LOCAL: Start listening on port
+  bootstrap().then(async (app) => {
+    const port = process.env.PORT || 3000;
+    await app.listen(port);
+  });
+}
+
+// VERCEL: Export the handler
+export const handler = async (req: any, res: any) => {
+  const app = await bootstrap();
+  const instance = app.getHttpAdapter().getInstance();
+  return instance(req, res);
+};
