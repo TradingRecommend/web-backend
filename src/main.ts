@@ -61,10 +61,14 @@ async function bootstrap() {
   return cachedApp;
 }
 
-// Export the default function for Vercel
+// VERCEL HANDLER
 export default async (req: any, res: any) => {
-  const server = await bootstrap();
-  return server(req, res);
+  if (!cachedApp) {
+    const app = await bootstrap();
+    // Vercel needs the Express instance to handle the request
+    cachedApp = app.getHttpAdapter().getInstance();
+  }
+  return cachedApp(req, res);
 };
 
 // Logic to run local vs serverless
