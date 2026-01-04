@@ -58,6 +58,12 @@ async function bootstrap() {
   return cachedApp;
 }
 
+// Export the default function for Vercel
+export default async (req: any, res: any) => {
+  const server = await bootstrap();
+  return server(req, res);
+};
+
 // Logic to run local vs serverless
 if (process.env.NODE_ENV !== 'production') {
   // LOCAL: Start listening on port
@@ -66,10 +72,3 @@ if (process.env.NODE_ENV !== 'production') {
     await app.listen(port);
   });
 }
-
-// VERCEL: Export the handler
-export const handler = async (req: any, res: any) => {
-  const app = await bootstrap();
-  const instance = app.getHttpAdapter().getInstance();
-  return instance(req, res);
-};
