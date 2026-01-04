@@ -24,7 +24,7 @@ import JwtAuthGuard from './guard/jwtAuth.guard';
 import LoginDto from './dto/login.dto';
 import JwtRefreshGuard from './guard/jwtRefresh.guard';
 import { ApiBody, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import User from 'src/entities/user.entity';
+import User from '../../entities/user.entity';
 
 @Controller('auth')
 @ApiTags('Auth')

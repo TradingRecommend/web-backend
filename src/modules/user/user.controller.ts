@@ -14,8 +14,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AllExceptionsFilter } from 'src/configs/decorators/catchError';
-import User from 'src/entities/user.entity';
+import { AllExceptionsFilter } from '../../configs/decorators/catchError';
+import User from '../../entities/user.entity';
 import JwtAuthGuard from '../auth/guard/jwtAuth.guard';
 import UpdateUserDto from './dto/updateUser.dto';
 import { UserService } from './user.service';
