@@ -6,8 +6,8 @@ import { faker } from '@faker-js/faker';
 const bcrypt = require('bcrypt');
 
 // Entity
-import Role from 'src/entities/role.entity';
-import User from 'src/entities/user.entity';
+import Role from '../../entities/role.entity';
+import User from '../../entities/user.entity';
 
 @Injectable()
 export class SeederService {
