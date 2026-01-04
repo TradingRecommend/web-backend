@@ -21,9 +21,12 @@ async function bootstrap() {
 
     app.useLogger(app.get(CustomLogger));
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    app.use(cookieParser());
+    // FIX: Handle different import behaviors for cookie-parser
+    const cookieHandler =
+      typeof cookieParser === 'function'
+        ? cookieParser
+        : (cookieParser as any).default;
+    app.use(cookieHandler());
     app.setGlobalPrefix('api/v1');
 
     const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
