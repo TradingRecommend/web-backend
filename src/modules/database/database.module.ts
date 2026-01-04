@@ -14,6 +14,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
+        // Enable SSL when requested by environment (e.g. PGSSLMODE=require or POSTGRES_SSL=true)
+        ssl:
+          configService.get('PGSSLMODE') === 'require'
+            ? { rejectUnauthorized: false }
+            : false,
         entities: ['dist/**/*.entity.js'],
         synchronize: true,
         autoLoadEntities: true,
