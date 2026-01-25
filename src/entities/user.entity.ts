@@ -1,15 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  JoinTable,
-  ManyToMany,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import Role from './role.entity';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { UserRole } from './userRole.entity';
 
 @Entity()
 class User {
@@ -34,19 +26,8 @@ class User {
   @Exclude()
   public currentHashedRefreshToken?: string;
 
-  @ManyToMany(() => Role)
-  @JoinTable({
-    name: 'user_roles', // table name for the junction table of this relation
-    joinColumn: {
-      name: 'user',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'role',
-      referencedColumnName: 'id',
-    },
-  })
-  roles: Role[];
+  @OneToMany(() => UserRole, (userRole) => userRole.user)
+  userRoles: UserRole[];
 }
 
 export default User;

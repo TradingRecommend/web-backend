@@ -20,7 +20,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             ? { rejectUnauthorized: false }
             : false,
         entities: ['dist/**/*.entity.js'],
-        synchronize: true,
+        synchronize: false,
         autoLoadEntities: true,
       }),
     }),

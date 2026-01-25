@@ -5,7 +5,8 @@ import { In, Repository } from 'typeorm';
 import User from '../../entities/user.entity';
 import CreateUserDto from './dto/createUser.dto';
 import UpdateUserDto from './dto/updateUser.dto';
-import bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt';
+import { UserRole } from '../../entities/userRole.entity';
 
 @Injectable()
 export class UserService {
@@ -15,15 +16,25 @@ export class UserService {
 
     @InjectRepository(Role)
     private roleRepository: Repository<Role>,
+
+    @InjectRepository(UserRole)
+    private userRoleRepository: Repository<UserRole>,
   ) {}
+
+  private _transformUser(user: User): User {
+    if (user && user.userRoles) {
+      (user as any).roles = user.userRoles.map((ur) => ur.role.name);
+    }
+    return user;
+  }
 
   async getByEmail(email: string) {
     const user = await this.usersRepository.findOne({
       where: { email },
-      relations: ['roles'],
+      relations: ['userRoles', 'userRoles.role'],
     });
     if (user) {
-      return user;
+      return this._transformUser(user);
     }
     throw new HttpException(
       'User with this email does not exist',
@@ -32,9 +43,12 @@ export class UserService {
   }
 
   async getById(id: number) {
-    const user = await this.usersRepository.findOne({ where: { id } });
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['userRoles', 'userRoles.role'],
+    });
     if (user) {
-      return user;
+      return this._transformUser(user);
     }
     throw new HttpException(
       'User with this id does not exist',
@@ -48,42 +62,50 @@ export class UserService {
     const newUser = new User();
     newUser.email = email;
     newUser.name = name;
-    newUser.password = password;
+    newUser.password = await bcrypt.hash(password, 10);
 
-    let roleEntities = [];
-    if (roles.length > 0) {
+    const savedUser = await this.usersRepository.save(newUser);
+
+    let roleEntities: Role[] = [];
+    if (roles && roles.length > 0) {
       roleEntities = await this.roleRepository.find({
         where: {
           name: In(roles),
         },
       });
     } else {
-      const role = await this.roleRepository.find({
+      const role = await this.roleRepository.findOne({
         where: {
           name: Roles.MEMBER,
         },
       });
-      roleEntities.push(role);
+      if (role) {
+        roleEntities.push(role);
+      }
     }
 
-    newUser.roles = roleEntities;
+    const userRoles = roleEntities.map((role) => {
+      const userRole = new UserRole();
+      userRole.roleId = role.id;
+      userRole.userId = savedUser.id;
+      return userRole;
+    });
 
-    await this.usersRepository.save(newUser);
-    return newUser;
+    await this.userRoleRepository.save(userRoles);
+
+    return this.getById(savedUser.id);
   }
 
   public async updateUserById(userId: number, userData: UpdateUserDto) {
-    let user = await this.getById(userId);
+    const user = await this.getById(userId);
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
 
-    await this.usersRepository.update(
-      {
-        id: userId,
-      },
-      {},
-    );
-    user = await this.getById(userId);
+    // Update basic user info
+    await this.usersRepository.update({ id: userId }, { name: userData.name });
 
-    return user;
+    return this.getById(userId);
   }
 
   async setCurrentRefreshToken(refreshToken: string, userId: number) {
@@ -95,6 +117,10 @@ export class UserService {
 
   async getUserIfRefreshTokenMatches(refreshToken: string, userId: number) {
     const user = await this.getById(userId);
+
+    if (!user.currentHashedRefreshToken) {
+      return;
+    }
 
     const isRefreshTokenMatching = await bcrypt.compare(
       refreshToken,

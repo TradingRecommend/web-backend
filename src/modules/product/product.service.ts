@@ -12,7 +12,6 @@ export class ProductService {
   ) {}
 
   async search(text: string) {
-    console.log('7777777777777777777777');
     return [];
   }
 

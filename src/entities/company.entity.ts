@@ -1,4 +1,5 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, JoinColumn, ManyToOne } from 'typeorm';
+import Industry from './industry.entity';
 
 @Entity()
 export default class Company {
@@ -8,8 +9,11 @@ export default class Company {
   @Column()
   name: string;
 
-  @Column()
-  industry: number;
+  @ManyToOne(() => Industry, (industry) => industry.companies, {
+    createForeignKeyConstraints: false, // <--- THIS IS THE KEY
+  })
+  @JoinColumn({ name: 'id' })
+  industry: Industry;
 
   @Column({ nullable: true })
   description: string;
