@@ -8,6 +8,7 @@ const bcrypt = require('bcrypt');
 // Entity
 import Role from '../../entities/role.entity';
 import User from '../../entities/user.entity';
+import { UserRole } from '../../entities/userRole.entity';
 
 @Injectable()
 export class SeederService {
@@ -19,6 +20,9 @@ export class SeederService {
 
     @InjectRepository(User)
     private userRepo: Repository<User>,
+
+    @InjectRepository(UserRole)
+    private userRoleRepo: Repository<UserRole>,
   ) {}
 
   async seed() {
@@ -27,6 +31,8 @@ export class SeederService {
 
   async seedUsers() {
     try {
+      // Delete all userRole
+      await this.userRoleRepo.delete({});
       // Delete all role
       await this.roleRepo.delete({});
       // Detele all user
@@ -47,23 +53,31 @@ export class SeederService {
       this.logger.debug('Successfuly completed seeding roles...');
 
       // Create new user
-      const users = [];
+      const userPromises = [];
       const hashedPassword = await bcrypt.hash('123456', 10);
-      roles.forEach((role) => {
+      roles.forEach(() => {
         const user = new User();
 
         user.name = faker.name.findName();
         user.email = faker.internet.email();
-        user.roles = [role];
         user.password = hashedPassword;
 
-        users.push(this.userRepo.save(user));
+        userPromises.push(this.userRepo.save(user));
       });
 
-      await Promise.all(users);
+      const savedUsers = await Promise.all(userPromises);
+      const userRolePromises = [];
+      for (let i = 0; i < savedUsers.length; i++) {
+        const userRole = new UserRole();
+        userRole.user = savedUsers[i];
+        userRole.role = roles[i];
+        userRolePromises.push(this.userRoleRepo.save(userRole));
+      }
+      await Promise.all(userRolePromises);
 
       this.logger.debug('Successfuly completed seeding users...');
     } catch (error) {
+      console.error(error);
       this.logger.error('Failed seeding users...');
     }
   }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import Company from '../../entities/company.entity';
 import Industry from '../../entities/industry.entity';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 
 @Injectable()
 export class CompanyService {
@@ -26,7 +26,7 @@ export class CompanyService {
     const company = this.companyRepo.create({
       symbol: createDto.symbol,
       name: createDto.name,
-      industry: createDto.industryId,
+      industry: industry,
       description: createDto.description,
     });
     return this.companyRepo.save(company);
@@ -34,25 +34,50 @@ export class CompanyService {
 
   /**
    * Find companies with pagination.
+   * @param symbol filter by symbol (partial match)
+   * @param industry filter by industry ID
+   * @param order 'ASC' | 'DESC' for sorting by symbol
    * @param page 1-based page number (default 1)
    * @param limit items per page (default 20)
    * @returns { data: Company[]; total: number; page: number; limit: number }
    */
-  async find(page = 1, limit = 20) {
-    const take = Math.max(1, Number(limit) || 20);
-    const skip = (Math.max(1, Number(page) || 1) - 1) * take;
+  async find(
+    symbol?: string,
+    industry?: string,
+    order?: 'ASC' | 'DESC',
+    page = 1,
+    limit = 20,
+  ) {
+    let whereClause: any = {};
+
+    if (symbol) {
+      whereClause.symbol = Like(`%${symbol}%`);
+    }
+
+    if (industry) {
+      whereClause = {
+        ...whereClause,
+        industry: {
+          id: `${industry}`,
+        },
+      };
+    }
 
     const [data, total] = await this.companyRepo.findAndCount({
-      skip,
-      take,
-      order: { symbol: 'ASC' },
+      where: whereClause,
+      order: {
+        symbol: order || 'ASC',
+      },
+      relations: ['industry'],
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
     return {
       items: data,
       total,
-      page: Number(page) || 1,
-      limit: take,
+      page: page,
+      limit: limit,
     };
   }
 
@@ -76,7 +101,7 @@ export class CompanyService {
         where: { id: updateDto.industryId },
       });
       if (!industry) throw new NotFoundException('Industry not found');
-      company.industry = updateDto.industryId;
+      company.industry = industry;
     }
     if (updateDto.name !== undefined) company.name = updateDto.name;
     if (updateDto.description !== undefined)

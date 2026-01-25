@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import Role from '../../entities/role.entity';
 import User from '../../entities/user.entity';
+import { UserRole } from '../../entities/userRole.entity';
 import { DatabaseModule } from '../database/database.module';
 import { SeederService } from './seeder.service';
 
@@ -29,7 +30,7 @@ import { SeederService } from './seeder.service';
       }),
     }),
     DatabaseModule,
-    TypeOrmModule.forFeature([User, Role]),
+    TypeOrmModule.forFeature([User, Role, UserRole]),
   ],
   providers: [SeederService, Logger],
 })

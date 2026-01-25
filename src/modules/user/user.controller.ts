@@ -1,13 +1,9 @@
 import {
   Body,
-  Catch,
   Controller,
   Get,
-  HttpException,
-  HttpStatus,
   Param,
   Patch,
-  Post,
   Query,
   Req,
   UseFilters,
@@ -15,13 +11,15 @@ import {
 } from '@nestjs/common';
 import { ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AllExceptionsFilter } from '../../configs/decorators/catchError';
+import { Roles } from '../../entities/role.entity';
 import User from '../../entities/user.entity';
-import JwtAuthGuard from '../auth/guard/jwtAuth.guard';
+import RolesGuard from '../auth/guard/roles.guard';
 import UpdateUserDto from './dto/updateUser.dto';
 import { UserService } from './user.service';
 
 @Controller('user')
 @ApiTags('User')
+@UseGuards(RolesGuard([Roles.SYSTEMADMIN]))
 export class UserController {
   constructor(private readonly usersService: UserService) {}
 
@@ -35,7 +33,6 @@ export class UserController {
     status: 404,
     description: 'Get user unsuccessfully',
   })
-  @UseGuards(JwtAuthGuard)
   async getUserByEmail(@Query() queries) {
     const { email } = queries;
     const users = this.usersService.getByEmail(email);
@@ -44,7 +41,6 @@ export class UserController {
 
   @Patch('/:userId')
   @UseFilters(AllExceptionsFilter)
-  @UseGuards(JwtAuthGuard)
   @ApiParam({
     name: 'userId',
     required: true,
