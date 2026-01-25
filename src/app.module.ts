@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module, MiddlewareConsumer } from '@nestjs/common';
 import LoggerMiddleware from './configs/middlewares/logger.middleware';
 import { DatabaseModule } from './modules/database/database.module';
 import { LoggerModule } from './modules/log/logs.module';
@@ -11,6 +11,9 @@ import { AllExceptionsFilter } from './configs/decorators/catchError';
 import { ProductModule } from './modules/product/product.module';
 import { IndustryModule } from './modules/industry/industry.module';
 import { CompanyModule } from './modules/company/company.module';
+import { CompanyPointModule } from './modules/companyPoint/companyPoint.module';
+import { CriteriaItemModule } from './modules/criteriaItem/criteriaItem.module';
+import { PredictionModule } from './modules/prediction/prediction.module';
 
 @Module({
   providers: [
@@ -54,10 +57,11 @@ import { CompanyModule } from './modules/company/company.module';
     AuthModule,
     UserModule,
     ProductModule,
-    // Newly added modules
-    // Industry and Company modules provide CRUD for industries and companies
     IndustryModule,
     CompanyModule,
+    CompanyPointModule,
+    CriteriaItemModule,
+    PredictionModule,
   ],
 })
 export class AppModule {

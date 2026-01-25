@@ -49,7 +49,11 @@ export class AuthController {
   async register(@Body() registrationData: RegisterDto) {
     const user = await this.authService.register(registrationData);
 
-    return user;
+    return {
+      email: user.email,
+      name: user.name,
+      roles: user.userRoles,
+    };
   }
 
   @HttpCode(200)
@@ -83,7 +87,15 @@ export class AuthController {
       accessTokenData.cookie,
       refreshTokenData.cookie,
     ]);
-    return user;
+    return {
+      currentUser: {
+        email: user.email,
+        name: user.name,
+        roles: user.userRoles,
+      },
+      accessToken: accessTokenData.token,
+      refreshToken: refreshTokenData.token,
+    };
   }
 
   @HttpCode(200)
@@ -123,6 +135,53 @@ export class AuthController {
     );
 
     request.res.setHeader('Set-Cookie', accessTokenCookie.cookie);
-    return user;
+    return {
+      accessToken: accessTokenCookie.token,
+      currentUser: {
+        email: user.email,
+        name: user.name,
+        roles: user.userRoles,
+      },
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('verify')
+  @ApiResponse({
+    status: 200,
+    description: 'Token verified and re-issued successfully',
+    type: User,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async verify(@Req() request) {
+    const { user } = request;
+    const accessTokenData = this.authService.getCookieWithJwtAccessToken(
+      user.id,
+    );
+    const refreshTokenData = this.authService.getCookieWithJwtRefreshToken(
+      user.id,
+    );
+
+    await this.usersService.setCurrentRefreshToken(
+      refreshTokenData.token,
+      user.id,
+    );
+
+    request.res.setHeader('Set-Cookie', [
+      accessTokenData.cookie,
+      refreshTokenData.cookie,
+    ]);
+    return {
+      currentUser: {
+        email: user.email,
+        name: user.name,
+        roles: user.userRoles,
+      },
+      accessToken: accessTokenData.token,
+      refreshToken: refreshTokenData.token,
+    };
   }
 }
